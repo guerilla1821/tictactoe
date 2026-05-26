@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>TicTacToe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 8vw, 3rem);
+            font-weight: 700;
+            background: linear-gradient(135deg, #e94560 0%, #ff6b9d 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.05em;
+            text-align: center;
+        }
+
+        .scoreboard {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 12px 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .score {
+            text-align: center;
+            flex: 1;
+        }
+
+        .score-label {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            margin-bottom: 4px;
+        }
+
+        .score-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .score.x .score-value { color: #4ecdc4; }
+        .score.o .score-value { color: #ff6b9d; }
+        .score.draw .score-value { color: #ffd93d; }
+
+        .status {
+            font-size: clamp(1rem, 4vw, 1.25rem);
+            font-weight: 600;
+            text-align: center;
+            min-height: 1.8em;
+            padding: 8px 16px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .status.win { background: rgba(78, 205, 196, 0.2); color: #4ecdc4; }
+        .status.lose { background: rgba(255, 107, 157, 0.2); color: #ff6b9d; }
+        .status.draw { background: rgba(255, 217, 61, 0.2); color: #ffd93d; }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            width: min(90vw, 400px);
+            aspect-ratio: 1;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .cell {
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(2.5rem, 12vw, 4rem);
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cell:active:not(.taken):not(.disabled) {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        @media (hover: hover) {
+            .cell:hover:not(.taken):not(.disabled) {
+                background: rgba(255, 255, 255, 0.08);
+                border-color: rgba(255, 255, 255, 0.2);
+            }
+        }
+
+        .cell.x {
+            color: #4ecdc4;
+            text-shadow: 0 0 20px rgba(78, 205, 196, 0.5);
+        }
+
+        .cell.o {
+            color: #ff6b9d;
+            text-shadow: 0 0 20px rgba(255, 107, 157, 0.5);
+        }
+
+        .cell.winning {
+            animation: pulse 0.6s ease-in-out infinite;
+            background: rgba(255, 217, 61, 0.15);
+            border-color: #ffd93d;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .cell .mark {
+            display: inline-block;
+            animation: drop 0.3s ease-out;
+        }
+
+        @keyframes drop {
+            0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            flex: 1;
+            min-width: 120px;
+            padding: 14px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            color: #fff;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #e94560 0%, #ff6b9d 100%);
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        .mode-toggle {
+            display: flex;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 4px;
+            gap: 4px;
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            opacity: 0.6;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #e94560 0%, #ff6b9d 100%);
+            opacity: 1;
+            box-shadow: 0 2px 10px rgba(233, 69, 96, 0.3);
+        }
+
+        @media (max-width: 380px) {
+            .container { padding: 12px; gap: 14px; }
+            .scoreboard { padding: 10px 12px; }
+            .score-value { font-size: 1.25rem; }
+        }
+
+        @media (max-height: 700px) {
+            .container { gap: 12px; padding: 12px; }
+            h1 { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TicTacToe</h1>
+
+        <div class="mode-toggle">
+            <button class="mode-btn active" data-mode="pvp">2 Spieler</button>
+            <button class="mode-btn" data-mode="cpu">vs Computer</button>
+        </div>
+
+        <div class="scoreboard">
+            <div class="score x">
+                <div class="score-label" id="labelX">Spieler X</div>
+                <div class="score-value" id="scoreX">0</div>
+            </div>
+            <div class="score draw">
+                <div class="score-label">Unentschieden</div>
+                <div class="score-value" id="scoreDraw">0</div>
+            </div>
+            <div class="score o">
+                <div class="score-label" id="labelO">Spieler O</div>
+                <div class="score-value" id="scoreO">0</div>
+            </div>
+        </div>
+
+        <div class="status" id="status">X ist am Zug</div>
+
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-primary" id="newGameBtn">Neues Spiel</button>
+            <button class="btn-secondary" id="resetBtn">Punkte zurücksetzen</button>
+        </div>
+    </div>
+
+    <script>
+        const board = document.getElementById('board');
+        const cells = document.querySelectorAll('.cell');
+        const statusEl = document.getElementById('status');
+        const scoreXEl = document.getElementById('scoreX');
+        const scoreOEl = document.getElementById('scoreO');
+        const scoreDrawEl = document.getElementById('scoreDraw');
+        const labelX = document.getElementById('labelX');
+        const labelO = document.getElementById('labelO');
+        const newGameBtn = document.getElementById('newGameBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const modeButtons = document.querySelectorAll('.mode-btn');
+
+        let gameState = Array(9).fill('');
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let mode = 'pvp';
+        let scores = { X: 0, O: 0, draw: 0 };
+
+        const winningCombos = [
+            [0,1,2], [3,4,5], [6,7,8],
+            [0,3,6], [1,4,7], [2,5,8],
+            [0,4,8], [2,4,6]
+        ];
+
+        function updateStatus(text, className = '') {
+            statusEl.textContent = text;
+            statusEl.className = 'status ' + className;
+        }
+
+        function updateLabels() {
+            if (mode === 'cpu') {
+                labelX.textContent = 'Du';
+                labelO.textContent = 'Computer';
+            } else {
+                labelX.textContent = 'Spieler X';
+                labelO.textContent = 'Spieler O';
+            }
+        }
+
+        function checkWin(state, player) {
+            for (const combo of winningCombos) {
+                if (combo.every(i => state[i] === player)) {
+                    return combo;
+                }
+            }
+            return null;
+        }
+
+        function checkDraw(state) {
+            return state.every(cell => cell !== '');
+        }
+
+        function handleCellClick(e) {
+            const idx = parseInt(e.currentTarget.dataset.index);
+            if (!gameActive || gameState[idx] !== '') return;
+            if (mode === 'cpu' && currentPlayer === 'O') return;
+            makeMove(idx, currentPlayer);
+        }
+
+        function makeMove(idx, player) {
+            gameState[idx] = player;
+            const cell = cells[idx];
+            cell.classList.add('taken', player.toLowerCase());
+            cell.innerHTML = `<span class="mark">${player}</span>`;
+
+            const winningCombo = checkWin(gameState, player);
+            if (winningCombo) {
+                gameActive = false;
+                winningCombo.forEach(i => cells[i].classList.add('winning'));
+                scores[player]++;
+                updateScores();
+                if (mode === 'cpu') {
+                    if (player === 'X') {
+                        updateStatus('🎉 Du hast gewonnen!', 'win');
+                    } else {
+                        updateStatus('💻 Computer hat gewonnen!', 'lose');
+                    }
+                } else {
+                    updateStatus(`🎉 Spieler ${player} gewinnt!`, 'win');
+                }
+                return;
+            }
+
+            if (checkDraw(gameState)) {
+                gameActive = false;
+                scores.draw++;
+                updateScores();
+                updateStatus('Unentschieden!', 'draw');
+                return;
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateTurnStatus();
+
+            if (mode === 'cpu' && currentPlayer === 'O' && gameActive) {
+                cells.forEach(c => c.classList.add('disabled'));
+                setTimeout(() => {
+                    cpuMove();
+                    cells.forEach(c => c.classList.remove('disabled'));
+                }, 500);
+            }
+        }
+
+        function updateTurnStatus() {
+            if (mode === 'cpu') {
+                updateStatus(currentPlayer === 'X' ? 'Du bist am Zug' : 'Computer denkt...');
+            } else {
+                updateStatus(`${currentPlayer} ist am Zug`);
+            }
+        }
+
+        function minimax(state, depth, isMaximizing) {
+            if (checkWin(state, 'O')) return 10 - depth;
+            if (checkWin(state, 'X')) return depth - 10;
+            if (checkDraw(state)) return 0;
+
+            if (isMaximizing) {
+                let best = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (state[i] === '') {
+                        state[i] = 'O';
+                        best = Math.max(best, minimax(state, depth + 1, false));
+                        state[i] = '';
+                    }
+                }
+                return best;
+            } else {
+                let best = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (state[i] === '') {
+                        state[i] = 'X';
+                        best = Math.min(best, minimax(state, depth + 1, true));
+                        state[i] = '';
+                    }
+                }
+                return best;
+            }
+        }
+
+        function cpuMove() {
+            if (!gameActive) return;
+            let bestScore = -Infinity;
+            let bestMove = -1;
+            for (let i = 0; i < 9; i++) {
+                if (gameState[i] === '') {
+                    gameState[i] = 'O';
+                    const score = minimax(gameState, 0, false);
+                    gameState[i] = '';
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = i;
+                    }
+                }
+            }
+            if (bestMove !== -1) {
+                makeMove(bestMove, 'O');
+            }
+        }
+
+        function updateScores() {
+            scoreXEl.textContent = scores.X;
+            scoreOEl.textContent = scores.O;
+            scoreDrawEl.textContent = scores.draw;
+            saveScores();
+        }
+
+        function saveScores() {
+            try {
+                localStorage.setItem('ttt_scores', JSON.stringify(scores));
+            } catch (e) {}
+        }
+
+        function loadScores() {
+            try {
+                const saved = localStorage.getItem('ttt_scores');
+                if (saved) {
+                    scores = JSON.parse(saved);
+                    updateScores();
+                }
+            } catch (e) {}
+        }
+
+        function newGame() {
+            gameState = Array(9).fill('');
+            currentPlayer = 'X';
+            gameActive = true;
+            cells.forEach(cell => {
+                cell.classList.remove('taken', 'x', 'o', 'winning', 'disabled');
+                cell.innerHTML = '';
+            });
+            updateTurnStatus();
+        }
+
+        function resetScores() {
+            scores = { X: 0, O: 0, draw: 0 };
+            updateScores();
+            newGame();
+        }
+
+        function setMode(newMode) {
+            mode = newMode;
+            modeButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === newMode);
+            });
+            updateLabels();
+            newGame();
+        }
+
+        cells.forEach(cell => cell.addEventListener('click', handleCellClick));
+        newGameBtn.addEventListener('click', newGame);
+        resetBtn.addEventListener('click', resetScores);
+        modeButtons.forEach(btn => {
+            btn.addEventListener('click', () => setMode(btn.dataset.mode));
+        });
+
+        loadScores();
+        updateLabels();
+        updateTurnStatus();
+    </script>
+</body>
+</html>
